@@ -14,6 +14,11 @@ k3s_version: "v1.26.7+k3s1"    # e.g. "v1.26.7+k3s1" or leave empty for latest
 k3s_channel: ""                # license channel e.g. "stable", "latest", etc.
 k3s_extra_args: ""             # any extra env flags, e.g. "INSTALL_K3S_EXEC='--disable traefik'"
 
+# K9s
+install_k9s: "yes"
+k9s_version: "v0.27.4"
+k9s_download_url: "https://github.com/derailed/k9s/releases/download/{{ k9s_version }}/k9s_Linux_amd64.tar.gz"
+
 # Terraform
 install_terraform: "yes"
 terraform_version: "1.4.6"
