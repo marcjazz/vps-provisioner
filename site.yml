@@ -5,6 +5,28 @@
   vars_files:
     - group_vars/all.yml
 
+  vars_prompt:
+    - name: install_docker
+      prompt: "Install Docker?"
+      private: false
+      default: "yes"
+    - name: install_k3s
+      prompt: "Install K3s?"
+      private: false
+      default: "{{ install_k3s }}"
+    - name: install_terraform
+      prompt: "Install Terraform?"
+      private: false
+      default: "{{ install_terraform }}"
+    - name: install_go
+      prompt: "Install Go?"
+      private: false
+      default: "{{ install_go }}"
+    - name: install_localstack
+      prompt: "Install LocalStack?"
+      private: false
+      default: "{{ install_localstack }}"
+
   tasks:
 
   - name: ensure apt cache is up to date
@@ -26,35 +48,38 @@
   #
   # 1) Docker
   #
-  - name: add Docker GPG key
-    apt_key:
-      url: "{{ docker_gpg_key_url }}"
-      state: present
+  - name: Install Docker
+    when: install_docker | bool
+    block:
+      - name: add Docker GPG key
+        apt_key:
+          url: "{{ docker_gpg_key_url }}"
+          state: present
 
-  - name: add Docker apt repo
-    apt_repository:
-      repo: >
-        deb [arch=amd64] {{ docker_apt_repo }}
-        {{ ansible_lsb.codename }} {{ docker_channel }}
-      state: present
+      - name: add Docker apt repo
+        apt_repository:
+          repo: >
+            deb [arch=amd64] {{ docker_apt_repo }}
+            {{ ansible_lsb.codename }} {{ docker_channel }}
+          state: present
 
-  - name: install Docker packages
-    apt:
-      name: "{{ docker_packages }}"
-      state: latest
-      update_cache: yes
+      - name: install Docker packages
+        apt:
+          name: "{{ docker_packages }}"
+          state: latest
+          update_cache: yes
 
-  - name: ensure docker service is started & enabled
-    service:
-      name: docker
-      state: started
-      enabled: yes
+      - name: ensure docker service is started & enabled
+        service:
+          name: docker
+          state: started
+          enabled: yes
 
   #
   # 2) K3s
   #
   - name: install K3s via upstream install script
-    when: install_k3s
+    when: install_k3s | bool
     block:
       - name: fetch k3s install script
         get_url:
@@ -80,64 +105,62 @@
   #
   # 3) Terraform
   #
-  - name: download Terraform zip
-    when: install_terraform
-    get_url:
-      url: "{{ terraform_binary_src }}"
-      dest: /tmp/terraform_{{ terraform_version }}_linux_amd64.zip
-      mode: '0644'
-    register: tf_download
+  - name: Install Terraform
+    when: install_terraform | bool
+    block:
+      - name: download Terraform zip
+        get_url:
+          url: "{{ terraform_binary_src }}"
+          dest: /tmp/terraform_{{ terraform_version }}_linux_amd64.zip
+          mode: '0644'
+        register: tf_download
 
-  - name: download Terraform checksums
-    when: install_terraform
-    get_url:
-      url: "{{ terraform_checksums_url }}"
-      dest: /tmp/terraform_SHA256SUMS
-      mode: '0644'
+      - name: download Terraform checksums
+        get_url:
+          url: "{{ terraform_checksums_url }}"
+          dest: /tmp/terraform_SHA256SUMS
+          mode: '0644'
 
-  - name: verify Terraform checksum
-    when: install_terraform
-    shell: |
-      cd /tmp
-      grep "terraform_{{ terraform_version }}_linux_amd64.zip" terraform_SHA256SUMS | sha256sum -c -
+      - name: verify Terraform checksum
+        shell: |
+          cd /tmp
+          grep "terraform_{{ terraform_version }}_linux_amd64.zip" terraform_SHA256SUMS | sha256sum -c -
 
-  - name: unzip Terraform binary
-    when: install_terraform
-    unarchive:
-      src: /tmp/terraform_{{ terraform_version }}_linux_amd64.zip
-      dest: /usr/local/bin/
-      remote_src: yes
-      mode: '0755'
+      - name: unzip Terraform binary
+        unarchive:
+          src: /tmp/terraform_{{ terraform_version }}_linux_amd64.zip
+          dest: /usr/local/bin/
+          remote_src: yes
+          mode: '0755'
 
-  - name: create terraform wrapper symlink "tf"
-    when: install_terraform
-    file:
-      src: "{{ terraform_bin_dir }}/terraform"
-      dest: "{{ terraform_bin_dir }}/tf"
-      state: link
-      force: yes
+      - name: create terraform wrapper symlink "tf"
+        file:
+          src: "{{ terraform_bin_dir }}/terraform"
+          dest: "{{ terraform_bin_dir }}/tf"
+          state: link
+          force: yes
 
-  - name: create a tflocal wrapper
-    when: install_terraform and create_terraform_wrappers
-    copy:
-      dest: "{{ terraform_bin_dir }}/tflocal"
-      mode: '0755'
-      content: |
-        #!/usr/bin/env bash
-        export AWS_ACCESS_KEY_ID="{{ aws_access_key_id }}"
-        export AWS_SECRET_ACCESS_KEY="{{ aws_secret_access_key }}"
-        export AWS_DEFAULT_REGION="{{ aws_default_region }}"
-        export EDGE_PORT="{{ localstack_edge_port }}"
-        export LOCALSTACK_HOST="localhost"
-        export LOCALSTACK_ENDPOINT="{{ localstack_endpoint }}"
-        # you can extend this wrapper to inject Terraform provider plugin paths if needed
-        exec terraform "$@"
+      - name: create a tflocal wrapper
+        when: create_terraform_wrappers | bool
+        copy:
+          dest: "{{ terraform_bin_dir }}/tflocal"
+          mode: '0755'
+          content: |
+            #!/usr/bin/env bash
+            export AWS_ACCESS_KEY_ID="{{ aws_access_key_id }}"
+            export AWS_SECRET_ACCESS_KEY="{{ aws_secret_access_key }}"
+            export AWS_DEFAULT_REGION="{{ aws_default_region }}"
+            export EDGE_PORT="{{ localstack_edge_port }}"
+            export LOCALSTACK_HOST="localhost"
+            export LOCALSTACK_ENDPOINT="{{ localstack_endpoint }}"
+            # you can extend this wrapper to inject Terraform provider plugin paths if needed
+            exec terraform "$@"
 
   #
   # 4) Go
   #
   - name: install Go
-    when: install_go
+    when: install_go | bool
     block:
       - name: download Go tarball
         get_url:
@@ -161,25 +184,26 @@
   #
   # 5) LocalStack (Docker)
   #
-  - name: pull LocalStack Docker image
-    when: install_localstack
-    docker_image:
-      name: "{{ localstack_docker_image }}"
-      tag: "{{ localstack_version }}"
-      source: pull
+  - name: Install LocalStack
+    when: install_localstack | bool
+    block:
+      - name: pull LocalStack Docker image
+        docker_image:
+          name: "{{ localstack_docker_image }}"
+          tag: "{{ localstack_version }}"
+          source: pull
 
-  - name: run LocalStack container
-    when: install_localstack
-    docker_container:
-      name: "{{ localstack_container_name }}"
-      image: "{{ localstack_docker_image }}:{{ localstack_version }}"
-      state: started
-      restart_policy: unless-stopped
-      env:
-        SERVICES: "{{ localstack_services }}"
-        EDGE_PORT: "{{ localstack_edge_port }}"
-      ports:
-        - "{{ localstack_host_port }}:{{ localstack_edge_port }}"
+      - name: run LocalStack container
+        docker_container:
+          name: "{{ localstack_container_name }}"
+          image: "{{ localstack_docker_image }}:{{ localstack_version }}"
+          state: started
+          restart_policy: unless-stopped
+          env:
+            SERVICES: "{{ localstack_services }}"
+            EDGE_PORT: "{{ localstack_edge_port }}"
+          ports:
+            - "{{ localstack_host_port }}:{{ localstack_edge_port }}"
 
   #
   # 6) final cleanup
@@ -188,16 +212,16 @@
     file:
       path: "/tmp/terraform_{{ terraform_version }}_linux_amd64.zip"
       state: absent
-    when: install_terraform
+    when: install_terraform | bool
 
   - name: cleanup go temp files
     file:
       path: "/tmp/go{{ go_version }}.linux-amd64.tar.gz"
       state: absent
-    when: install_go
+    when: install_go | bool
 
   - name: cleanup k3s install script
     file:
       path: /tmp/install_k3s.sh
       state: absent
-    when: install_k3s
+    when: install_k3s | bool

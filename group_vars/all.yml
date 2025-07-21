@@ -9,20 +9,20 @@ docker_packages:
   - containerd.io
 
 # K3s
-install_k3s: true
+install_k3s: "yes"
 k3s_version: "v1.26.7+k3s1"    # e.g. "v1.26.7+k3s1" or leave empty for latest
 k3s_channel: ""                # license channel e.g. "stable", "latest", etc.
 k3s_extra_args: ""             # any extra env flags, e.g. "INSTALL_K3S_EXEC='--disable traefik'"
 
 # Terraform
-install_terraform: true
+install_terraform: "yes"
 terraform_version: "1.4.6"
 terraform_checksums_url: "https://releases.hashicorp.com/terraform/{{ terraform_version }}/terraform_{{ terraform_version }}_SHA256SUMS"
 terraform_binary_src: "https://releases.hashicorp.com/terraform/{{ terraform_version }}/terraform_{{ terraform_version }}_linux_amd64.zip"
 terraform_bin_dir: "/usr/local/bin"
 
 # tf/tflocal wrappers
-create_terraform_wrappers: false
+create_terraform_wrappers: "no"
 # # Wrapper variables for tflocal
 # localstack_endpoint: "http://localhost:4566"
 # aws_access_key_id: "test"
@@ -30,7 +30,7 @@ create_terraform_wrappers: false
 # aws_default_region: "us-east-1"
 
 # # LocalStack (in Docker)
-install_localstack: false
+install_localstack: "no"
 # localstack_docker_image: "localstack/localstack"
 # localstack_version: "2.1.0"
 # localstack_container_name: "localstack"
@@ -39,7 +39,7 @@ install_localstack: false
 # localstack_host_port: 4566
 
 # Go
-install_go: true
+install_go: "yes"
 go_version: "1.21.0"
 go_download_url: "https://go.dev/dl/go{{ go_version }}.linux-amd64.tar.gz"
 go_checksum: "d0398903a16ba2232b389fb31032ddf57cac34efda306a0eebac34f0965a0742" # sha256 for go1.21.0.linux-amd64.tar.gz
