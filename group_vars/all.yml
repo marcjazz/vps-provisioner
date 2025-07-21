@@ -57,3 +57,7 @@ apt_update_cache: yes
 install_oh_my_zsh: "yes"
 oh_my_zsh_theme: "robbyrussell"
 set_zsh_as_default: "yes"
+
+# Helm
+install_helm: "yes"
+helm_install_dir: /usr/local/bin

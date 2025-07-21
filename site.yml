@@ -38,6 +38,10 @@
       prompt: "Set Zsh as default shell?"
       private: false
       default: "{{ set_zsh_as_default }}"
+    - name: install_helm
+      prompt: "Install Helm?"
+      private: false
+      default: "yes"
 
   tasks:
 
@@ -296,3 +300,7 @@
         user:
           name: "{{ ansible_user }}"
           shell: /bin/zsh
+  
+  - name: install helm
+    include_role:
+      name: helm

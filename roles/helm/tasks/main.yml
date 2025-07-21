@@ -1,0 +1,24 @@
+---
+- name: Install Helm
+  when: install_helm | bool
+  block:
+    - name: ensure curl is installed
+      apt:
+        name: curl
+        state: present
+
+    - name: download Helm install script
+      get_url:
+        url: "https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3"
+        dest: /tmp/get_helm.sh
+        mode: '0755'
+
+    - name: run Helm installer
+      shell: |
+        HELM_INSTALL_DIR="{{ helm_install_dir }}" \
+        /bin/bash /tmp/get_helm.sh
+
+    - name: cleanup helm install script
+      file:
+        path: /tmp/get_helm.sh
+        state: absent
