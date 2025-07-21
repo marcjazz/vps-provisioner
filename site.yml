@@ -42,6 +42,10 @@
       prompt: "Install Helm?"
       private: false
       default: "yes"
+    - name: install_aws_cli
+      prompt: "Install AWS CLI?"
+      private: false
+      default: "yes"
 
   tasks:
 
@@ -304,3 +308,8 @@
   - name: install helm
     include_role:
       name: helm
+
+  - name: install aws-cli
+    include_role:
+      name: aws-cli
+    when: install_aws_cli | bool
