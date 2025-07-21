@@ -30,6 +30,14 @@
       prompt: "Install K9s?"
       private: false
       default: "{{ install_k9s }}"
+    - name: install_oh_my_zsh
+      prompt: "Install Oh My Zsh?"
+      private: false
+      default: "{{ install_oh_my_zsh }}"
+    - name: set_zsh_as_default
+      prompt: "Set Zsh as default shell?"
+      private: false
+      default: "{{ set_zsh_as_default }}"
 
   tasks:
 
@@ -44,6 +52,7 @@
         - ca-certificates
         - curl
         - gnupg
+        - git
         - lsb-release
         - zsh
         - unzip
@@ -260,3 +269,30 @@
       path: "/tmp/k9s_Linux_amd64.tar.gz"
       state: absent
     when: install_k9s | bool
+
+  #
+  # 8) Oh My Zsh
+  #
+  - name: Install Oh My Zsh
+    when: install_oh_my_zsh | bool
+    block:
+      - name: clone oh-my-zsh
+        git:
+          repo: https://github.com/ohmyzsh/ohmyzsh.git
+          dest: "/home/{{ ansible_user }}/.oh-my-zsh"
+          version: master
+          accept_hostkey: yes
+
+      - name: create .zshrc from template
+        template:
+          src: templates/zshrc.j2
+          dest: "/home/{{ ansible_user }}/.zshrc"
+          owner: "{{ ansible_user }}"
+          group: "{{ ansible_user }}"
+          mode: '0644'
+
+      - name: set zsh as default shell
+        when: set_zsh_as_default | bool
+        user:
+          name: "{{ ansible_user }}"
+          shell: /bin/zsh

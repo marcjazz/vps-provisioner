@@ -52,3 +52,8 @@ go_install_dir: "/usr/local"
 
 # Utilities
 apt_update_cache: yes
+
+# oh-my-zsh
+install_oh_my_zsh: "yes"
+oh_my_zsh_theme: "robbyrussell"
+set_zsh_as_default: "yes"
