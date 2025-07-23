@@ -18,6 +18,10 @@
       prompt: "Install Terraform?"
       private: false
       default: "{{ install_terraform }}"
+    - name: install_tfsec
+      prompt: "Install tfsec?"
+      private: false
+      default: "{{ install_tfsec }}"
     - name: install_go
       prompt: "Install Go?"
       private: false
@@ -46,6 +50,10 @@
       prompt: "Install AWS CLI?"
       private: false
       default: "yes"
+    - name: copy_kubeconfig_to_home
+      prompt: "Copy Kubeconfig to Home dir?"
+      private: false
+      default: "yes"
 
   tasks:
 
@@ -64,6 +72,7 @@
         - lsb-release
         - zsh
         - unzip
+        - make
       state: present
 
   #
@@ -96,6 +105,13 @@
           state: started
           enabled: yes
 
+      - name: add user to docker group
+        become: true
+        ansible.builtin.user:
+          name: "{{ ansible_user }}"
+          groups: docker
+          append: yes
+
   #
   # 2) K3s
   #
@@ -123,6 +139,15 @@
           state: started
           enabled: yes
 
+      - name: Copy Kubeconfig and set ownership
+        copy:
+          src: /etc/rancher/k3s/k3s.yaml
+          dest: ~/.kube/config
+          remote_src: yes
+          owner: "{{ ansible_user }}"
+          group: "{{ ansible_user }}"
+          mode: '0600'
+
   #
   # 3) Terraform
   #
@@ -135,6 +160,7 @@
           dest: /tmp/terraform_{{ terraform_version }}_linux_amd64.zip
           mode: '0644'
         register: tf_download
+        check_mode: no
 
       - name: download Terraform checksums
         get_url:
@@ -143,9 +169,11 @@
           mode: '0644'
 
       - name: verify Terraform checksum
-        shell: |
-          cd /tmp
-          grep "terraform_{{ terraform_version }}_linux_amd64.zip" terraform_SHA256SUMS | sha256sum -c -
+        shell: "cd /tmp && grep terraform_{{ terraform_version }}_linux_amd64.zip terraform_SHA256SUMS | awk '{print $1}' | xargs -I {} sha256sum -c <(echo \"{} terraform_{{ terraform_version }}_linux_amd64.zip\")"
+        args:
+          executable: /bin/bash
+        register: sha256sum_check
+        changed_when: false
 
       - name: unzip Terraform binary
         unarchive:
@@ -189,6 +217,7 @@
           dest: "/tmp/go{{ go_version }}.linux-amd64.tar.gz"
           checksum: "sha256:{{ go_checksum }}"
           mode: '0644'
+        check_mode: no
 
       - name: extract Go tarball
         unarchive:
@@ -313,3 +342,8 @@
     include_role:
       name: aws-cli
     when: install_aws_cli | bool
+
+  - name: install tfsec
+    include_role:
+      name: tfsec
+    when: install_tfsec | bool

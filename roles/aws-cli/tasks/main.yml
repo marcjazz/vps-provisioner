@@ -20,7 +20,7 @@
 - name: Install AWS CLI
   become: true
   ansible.builtin.command:
-    cmd: /tmp/aws/install
+    cmd: /tmp/aws/install --update
   changed_when: true
 
 - name: Clean up AWS CLI installer

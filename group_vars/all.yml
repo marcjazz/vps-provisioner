@@ -21,10 +21,16 @@ k9s_download_url: "https://github.com/derailed/k9s/releases/download/{{ k9s_vers
 
 # Terraform
 install_terraform: "yes"
-terraform_version: "1.4.6"
+terraform_version: "1.12.2"
 terraform_checksums_url: "https://releases.hashicorp.com/terraform/{{ terraform_version }}/terraform_{{ terraform_version }}_SHA256SUMS"
 terraform_binary_src: "https://releases.hashicorp.com/terraform/{{ terraform_version }}/terraform_{{ terraform_version }}_linux_amd64.zip"
 terraform_bin_dir: "/usr/local/bin"
+
+# Tfsec
+install_tfsec: "yes"
+tfsec_version: "v1.28.5"
+tfsec_download_url: "https://github.com/aquasecurity/tfsec/releases/download/{{ tfsec_version }}/tfsec-linux-amd64"
+tfsec_install_dir: "/usr/local/bin"
 
 # tf/tflocal wrappers
 create_terraform_wrappers: "no"
