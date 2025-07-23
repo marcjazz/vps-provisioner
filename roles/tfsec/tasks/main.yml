@@ -1,0 +1,15 @@
+---
+- name: "Install tfsec"
+  when: install_tfsec == "yes"
+  block:
+    - name: "Create tfsec install directory"
+      ansible.builtin.file:
+        path: "{{ tfsec_install_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: "Download and install tfsec"
+      ansible.builtin.get_url:
+        url: "{{ tfsec_download_url }}"
+        dest: "{{ tfsec_install_dir }}/tfsec"
+        mode: "0755"
