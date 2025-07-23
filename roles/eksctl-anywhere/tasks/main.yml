@@ -1,0 +1,55 @@
+---
+- name: Install eksctl-anywhere
+  become: true
+  block:
+    - name: "Check for existing {{ item.name }} installation"
+      stat:
+        path: "{{ item.link_path }}/{{ item.name }}"
+      register: "binary_eksctl_anywhere"
+
+    - name: "Get latest eksctl-anywhere release version"
+      uri:
+        url: "https://api.github.com/repos/aws/eks-anywhere/releases/latest"
+        return_content: yes
+      register: "eksctl_anywhere_latest_release"
+
+    - name: "Set download and checksum URI facts"
+      set_fact:
+        eksctl_anywhere_download_uri: "{{ (eksctl_anywhere_latest_release.json.assets | selectattr('name', 'match', 'eksctl-anywhere-.*-linux-amd64.tar.gz$') | first).browser_download_url }}"
+        eksctl_anywhere_checksum_uri: "{{ (eksctl_anywhere_latest_release.json.assets | selectattr('name', 'match', '.*sha256sums.txt$') | first).browser_download_url }}"
+
+    - name: "Get {{ item.name }} checksums"
+      uri:
+        url: "{{ eksctl_anywhere_checksum_uri }}"
+        return_content: yes
+      register: "checksum_eksctl_anywhere"
+
+    - name: "Set {{ item.name }} checksum fact"
+      set_fact:
+        eksctl_anywhere_checksum: "{{ checksum_eksctl_anywhere.content.split('\n') | select('search', eksctl_anywhere_download_uri | basename) | first | split(' ') | first }}"
+
+    - name: "Download and install {{ item.name }}"
+      when: "not binary_eksctl_anywhere.stat.exists"
+      get_url:
+        url: "{{ eksctl_anywhere_download_uri }}"
+        dest: "/tmp/{{ item.name }}.tar.gz"
+        checksum: "sha256:{{ eksctl_anywhere_checksum }}"
+
+    - name: "unarchive {{ item.name }}"
+      unarchive:
+        src: "/tmp/{{ item.name }}.tar.gz"
+        dest: "/tmp"
+        remote_src: yes
+
+    - name: "move {{ item.name }} to {{ item.link_path }}"
+      copy:
+        src: "/tmp/{{ item.name }}"
+        dest: "{{ item.link_path }}/{{ item.name }}"
+        owner: root
+        group: root
+        mode: 0755
+        remote_src: yes
+  vars:
+    item:
+      name: "eksctl-anywhere"
+      link_path: "/usr/local/bin"

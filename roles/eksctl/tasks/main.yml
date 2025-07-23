@@ -1,0 +1,46 @@
+---
+- name: Install eksctl
+  become: true
+  block:
+    - name: "Check for existing {{ item.name }} installation"
+      stat:
+        path: "{{ item.link_path }}/{{ item.name }}"
+      register: "binary_eksctl"
+
+    - name: "Get {{ item.name }} checksum"
+      uri:
+        url: "{{ item.uri_checksum }}"
+        return_content: yes
+      register: "checksum_eksctl"
+
+    - name: "Set {{ item.name }} checksum fact"
+      set_fact:
+        eksctl_checksum: "{{ checksum_eksctl.content.split('\n') | select('search', item.uri_download | basename) | first | split(' ') | first }}"
+
+    - name: "Download and install {{ item.name }}"
+      when: "not binary_eksctl.stat.exists"
+      get_url:
+        url: "{{ item.uri_download }}"
+        dest: "/tmp/{{ item.name }}.tar.gz"
+        checksum: "sha256:{{ eksctl_checksum }}"
+
+    - name: "unarchive {{ item.name }}"
+      unarchive:
+        src: "/tmp/{{ item.name }}.tar.gz"
+        dest: "/tmp"
+        remote_src: yes
+
+    - name: "move {{ item.name }} to {{ item.link_path }}"
+      copy:
+        src: "/tmp/{{ item.name }}"
+        dest: "{{ item.link_path }}/{{ item.name }}"
+        owner: root
+        group: root
+        mode: 0755
+        remote_src: yes
+  vars:
+    item:
+      name: "eksctl"
+      uri_checksum: "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_checksums.txt"
+      uri_download: "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz"
+      link_path: "/usr/local/bin"

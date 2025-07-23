@@ -50,6 +50,14 @@
       prompt: "Install AWS CLI?"
       private: false
       default: "yes"
+    - name: install_eksctl
+      prompt: "Install eksctl?"
+      private: false
+      default: "yes"
+    - name: install_eksctl_anywhere
+      prompt: "Install eksctl-anywhere?"
+      private: false
+      default: "yes"
     - name: copy_kubeconfig_to_home
       prompt: "Copy Kubeconfig to Home dir?"
       private: false
@@ -347,3 +355,13 @@
     include_role:
       name: tfsec
     when: install_tfsec | bool
+
+  - name: install eksctl
+    include_role:
+      name: eksctl
+    when: install_eksctl | bool
+
+  - name: install eksctl-anywhere
+    include_role:
+      name: eksctl-anywhere
+    when: install_eksctl_anywhere | bool
