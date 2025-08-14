@@ -88,6 +88,7 @@
   #
   - name: Install Docker
     when: install_docker | bool
+    ignore_errors: true
     block:
       - name: add Docker GPG key
         apt_key:
@@ -125,6 +126,7 @@
   #
   - name: install K3s via upstream install script
     when: install_k3s | bool
+    ignore_errors: true
     block:
       - name: fetch k3s install script
         get_url:
@@ -150,7 +152,7 @@
       - name: Copy Kubeconfig and set ownership
         copy:
           src: /etc/rancher/k3s/k3s.yaml
-          dest: ~/.kube/config
+          dest: "/home/{{ ansible_user }}/.kube/config"
           remote_src: yes
           owner: "{{ ansible_user }}"
           group: "{{ ansible_user }}"
@@ -161,6 +163,7 @@
   #
   - name: Install Terraform
     when: install_terraform | bool
+    ignore_errors: true
     block:
       - name: download Terraform zip
         get_url:
@@ -177,7 +180,11 @@
           mode: '0644'
 
       - name: verify Terraform checksum
-        shell: "cd /tmp && grep terraform_{{ terraform_version }}_linux_amd64.zip terraform_SHA256SUMS | awk '{print $1}' | xargs -I {} sha256sum -c <(echo \"{} terraform_{{ terraform_version }}_linux_amd64.zip\")"
+        shell: |
+          cd /tmp
+          CHECKSUM=$(grep "terraform_{{ terraform_version }}_linux_amd64.zip" terraform_SHA256SUMS | awk '{print $1}')
+          echo "${CHECKSUM}  terraform_{{ terraform_version }}_linux_amd64.zip" > terraform_checksum.txt
+          sha256sum -c terraform_checksum.txt
         args:
           executable: /bin/bash
         register: sha256sum_check
@@ -218,6 +225,7 @@
   #
   - name: install Go
     when: install_go | bool
+    ignore_errors: true
     block:
       - name: download Go tarball
         get_url:
@@ -244,6 +252,7 @@
   #
   - name: install K9s
     when: install_k9s | bool
+    ignore_errors: true
     block:
       - name: download K9s tarball
         get_url:
@@ -269,6 +278,7 @@
   #
   - name: Install LocalStack
     when: install_localstack | bool
+    ignore_errors: true
     block:
       - name: pull LocalStack Docker image
         docker_image:
@@ -297,6 +307,12 @@
       state: absent
     when: install_terraform | bool
 
+  - name: cleanup terraform checksum file
+    file:
+      path: "/tmp/terraform_checksum.txt"
+      state: absent
+    when: install_terraform | bool
+
   - name: cleanup go temp files
     file:
       path: "/tmp/go{{ go_version }}.linux-amd64.tar.gz"
@@ -320,6 +336,7 @@
   #
   - name: Install Oh My Zsh
     when: install_oh_my_zsh | bool
+    ignore_errors: true
     block:
       - name: clone oh-my-zsh
         git:
@@ -345,23 +362,28 @@
   - name: install helm
     include_role:
       name: helm
+    ignore_errors: true
 
   - name: install aws-cli
     include_role:
       name: aws-cli
     when: install_aws_cli | bool
+    ignore_errors: true
 
   - name: install tfsec
     include_role:
       name: tfsec
     when: install_tfsec | bool
+    ignore_errors: true
 
   - name: install eksctl
     include_role:
       name: eksctl
     when: install_eksctl | bool
+    ignore_errors: true
 
   - name: install eksctl-anywhere
     include_role:
       name: eksctl-anywhere
     when: install_eksctl_anywhere | bool
+    ignore_errors: true
